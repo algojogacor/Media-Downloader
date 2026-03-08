@@ -37,7 +37,6 @@ app.use('/api/', rateLimit({
 // ── Common yt-dlp flags (bypass bot detection) ─────────────────────────────
 const COMMON_FLAGS = [
   '--no-warnings',
-  '--no-call-home',
   '--no-check-certificate',
   '--no-playlist',
   '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
