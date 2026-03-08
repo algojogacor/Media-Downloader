@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexLoad — Universal Media Downloader</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050508;
+  --surface: #0d0d14;
+  --surface2: #13131e;
+  --border: rgba(255,255,255,0.07);
+  --border-active: rgba(255,255,255,0.18);
+  --text: #f0f0f5;
+  --muted: #5a5a72;
+  --accent: #00f5c4;
+  --accent2: #7c5cff;
+  --accent3: #ff5c8a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.bg-layer{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 20% 10%,rgba(124,92,255,.12) 0%,transparent 70%),
+  radial-gradient(ellipse 50% 40% at 80% 85%,rgba(0,245,196,.09) 0%,transparent 65%),
+  radial-gradient(ellipse 40% 30% at 55% 50%,rgba(255,92,138,.06) 0%,transparent 60%)}
+.grid-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:44px 44px}
+
+.wrapper{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:48px 24px 80px}
+
+/* Header */
+header{text-align:center;margin-bottom:44px;animation:fadeUp .6s ease both}
+.logo{font-family:'Syne',sans-serif;font-size:clamp(2.2rem,6vw,3.4rem);font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:10px}
+.logo span{color:var(--accent);position:relative}
+.logo span::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.tagline{font-size:.95rem;color:var(--muted);font-weight:300;letter-spacing:.04em}
+.badges{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.badge{font-family:'Space Mono',monospace;font-size:.65rem;padding:4px 10px;border-radius:100px;border:1px solid var(--border);color:var(--muted);letter-spacing:.05em}
+.badge.green{border-color:rgba(0,245,196,.3);color:var(--accent)}
+.badge.purple{border-color:rgba(124,92,255,.3);color:var(--accent2)}
+
+/* Platform pills */
+.platforms-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;animation:fadeUp .6s .05s ease both}
+.platform-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface);font-size:.78rem;color:var(--muted)}
+.platform-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.yt .dot{background:#ef4444}.ig .dot{background:#e1306c}.tt .dot{background:#00f2ea}
+.tw .dot{background:#1d9bf0}.fb .dot{background:#1877f2}.sc .dot{background:#ff5500}
+.pin .dot{background:#e60023}.rd .dot{background:#ff4500}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;animation:fadeUp .6s .1s ease both}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--accent);display:block}
+.stat-label{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;margin-bottom:20px;transition:border-color .4s;animation:fadeUp .6s .15s ease both}
+.card.active{border-color:var(--border-active)}
+
+/* Thumbnail preview */
+.thumb-row{display:none;align-items:center;gap:16px;margin-bottom:22px;padding:14px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);animation:fadeUp .3s ease}
+.thumb-row.show{display:flex}
+.thumb-img{width:80px;height:54px;border-radius:8px;object-fit:cover;background:#1a1a26;flex-shrink:0}
+.thumb-title{font-size:.9rem;font-weight:600;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb-sub{font-size:.75rem;color:var(--muted);margin-top:3px}
+
+/* Platform header */
+.platform-row{display:flex;align-items:center;gap:16px;margin-bottom:28px;min-height:52px}
+.platform-icon{width:52px;height:52px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:all .35s;flex-shrink:0}
+.platform-info h2{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;transition:color .35s}
+.platform-info p{font-size:.82rem;color:var(--muted);margin-top:2px}
+
+/* Input */
+.input-wrap{position:relative;margin-bottom:20px}
+.input-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:.75rem;color:var(--muted);pointer-events:none}
+#media-url{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 90px 16px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;transition:all .3s}
+#media-url::placeholder{color:var(--muted)}
+#media-url:focus{border-color:var(--border-active);background:#16161f}
+.paste-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.75rem;color:var(--muted);cursor:pointer;transition:all .2s;font-family:'Space Mono',monospace}
+.paste-btn:hover{color:var(--text);border-color:var(--border-active)}
+
+/* Format section */
+.format-section{overflow:hidden;transition:max-height .4s ease,opacity .4s ease;max-height:0;opacity:0;margin-bottom:0}
+.format-section.visible{max-height:400px;opacity:1;margin-bottom:20px}
+.format-label{font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-family:'Space Mono',monospace;margin-bottom:12px}
+.format-tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab-btn{padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;font-weight:500}
+.tab-btn.active{background:rgba(255,255,255,.06);border-color:var(--border-active);color:var(--text)}
+.tab-btn:disabled{opacity:.35;cursor:not-allowed}
+.quality-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.quality-btn{padding:12px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .2s;text-align:center;font-family:'DM Sans',sans-serif}
+.quality-btn:hover{border-color:var(--border-active);background:#1a1a26}
+.quality-btn.selected{border-color:var(--accent);background:rgba(0,245,196,.07)}
+.qlabel{font-weight:600;font-size:.9rem;display:block}
+.qsub{font-size:.68rem;color:var(--muted);margin-top:2px;display:block}
+.qbadge{display:inline-block;margin-top:4px;font-size:.6rem;padding:2px 6px;border-radius:4px;background:rgba(0,245,196,.12);color:var(--accent);font-family:'Space Mono',monospace}
+.loading-formats{text-align:center;padding:24px;color:var(--muted);font-size:.85rem}
+
+/* Download button */
+#btn-download{width:100%;padding:18px;border-radius:12px;border:none;font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;background:linear-gradient(135deg,#00f5c4,#00c49a);color:#000;box-shadow:0 0 30px rgba(0,245,196,.25)}
+#btn-download:hover:not(:disabled){box-shadow:0 0 45px rgba(0,245,196,.4);transform:translateY(-1px)}
+#btn-download:disabled{background:var(--surface2);color:var(--muted);box-shadow:none;cursor:not-allowed;transform:none}
+.btn-shimmer{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:transform .5s}
+#btn-download:hover .btn-shimmer{transform:translateX(100%)}
+
+/* Progress */
+.progress-area{display:none;margin-top:20px;padding:20px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);animation:fadeUp .3s ease}
+.progress-area.show{display:block}
+.progress-stage{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.stage-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s}
+.stage-dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1s infinite}
+.stage-dot.done{background:var(--accent);animation:none}
+.stage-label{font-size:.85rem;color:var(--muted);transition:color .3s}
+.stage-label.active{color:var(--text)}
+.progress-bar-wrap{height:3px;background:var(--border);border-radius:10px;overflow:hidden;margin:14px 0 8px}
+.progress-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:10px;transition:width .3s ease;box-shadow:0 0 8px var(--accent)}
+.progress-pct{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--muted);text-align:right}
+
+/* Result */
+.result-area{display:none;margin-top:20px;padding:20px;background:rgba(0,245,196,.05);border-radius:12px;border:1px solid rgba(0,245,196,.2);animation:fadeUp .3s ease}
+.result-area.show{display:block}
+.result-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px;color:var(--accent)}
+.result-meta{font-size:.8rem;color:var(--muted);margin-bottom:16px}
+.result-download-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;text-decoration:none}
+.result-download-btn:hover{box-shadow:0 0 20px rgba(0,245,196,.4);transform:translateY(-1px)}
+
+/* Error */
+.error-area{display:none;margin-top:20px;padding:16px 20px;background:rgba(255,92,138,.07);border-radius:12px;border:1px solid rgba(255,92,138,.25);animation:fadeUp .3s ease}
+.error-area.show{display:block}
+.error-title{font-size:.85rem;font-weight:600;color:var(--accent3);margin-bottom:4px}
+.error-msg{font-size:.8rem;color:var(--muted)}
+
+/* History */
+.history-section{animation:fadeUp .6s .25s ease both}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.clear-btn{font-size:.72rem;color:var(--muted);background:none;border:none;cursor:pointer;transition:color .2s;font-family:'Space Mono',monospace}
+.clear-btn:hover{color:var(--accent3)}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;animation:fadeUp .3s ease;cursor:pointer;transition:border-color .2s}
+.history-item:hover{border-color:var(--border-active)}
+.history-icon{font-size:1.2rem;flex-shrink:0}
+.history-info{flex:1;min-width:0}
+.history-url{font-size:.8rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-meta{font-size:.7rem;color:var(--muted);margin-top:2px}
+.history-badge{font-family:'Space Mono',monospace;font-size:.62rem;padding:3px 8px;border-radius:6px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
+.empty-state{text-align:center;padding:32px;color:var(--muted);font-size:.85rem;border:1px dashed var(--border);border-radius:12px}
+.empty-icon{font-size:2rem;display:block;margin-bottom:8px;opacity:.4}
+
+/* Spinner */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+.spinner-light{border:2px solid rgba(255,255,255,.15);border-top-color:var(--muted)}
+
+footer{text-align:center;margin-top:48px;font-size:.75rem;color:var(--muted);animation:fadeUp .6s .3s ease both}
+footer span{color:var(--accent)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="grid-overlay"></div>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">Nex<span>Load</span></div>
+    <p class="tagline">Universal media downloader. No ads. No limits.</p>
+    <div class="badges">
+      <span class="badge green">● ZERO ADS</span>
+      <span class="badge purple">● 8 PLATFORMS</span>
+      <span class="badge">● 4K SUPPORT</span>
+      <span class="badge">● NO WATERMARK</span>
+    </div>
+  </header>
+
+  <div class="platforms-row">
+    <div class="platform-pill yt"><span class="dot"></span>YouTube</div>
+    <div class="platform-pill ig"><span class="dot"></span>Instagram</div>
+    <div class="platform-pill tt"><span class="dot"></span>TikTok</div>
+    <div class="platform-pill tw"><span class="dot"></span>Twitter/X</div>
+    <div class="platform-pill fb"><span class="dot"></span>Facebook</div>
+    <div class="platform-pill sc"><span class="dot"></span>SoundCloud</div>
+    <div class="platform-pill pin"><span class="dot"></span>Pinterest</div>
+    <div class="platform-pill rd"><span class="dot"></span>Reddit</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><span class="stat-num" id="stat-total">0</span><div class="stat-label">Downloads Today</div></div>
+    <div class="stat-card"><span class="stat-num">8</span><div class="stat-label">Platforms</div></div>
+    <div class="stat-card"><span class="stat-num">4K</span><div class="stat-label">Max Quality</div></div>
+  </div>
+
+  <div class="card" id="media-card">
+
+    <!-- Thumbnail Preview (shown after /api/info) -->
+    <div class="thumb-row" id="thumb-row">
+      <img class="thumb-img" id="thumb-img" src="" alt="">
+      <div>
+        <div class="thumb-title" id="thumb-title"></div>
+        <div class="thumb-sub" id="thumb-sub"></div>
+      </div>
+    </div>
+
+    <div class="platform-row">
+      <div class="platform-icon" id="platform-icon">⬇️</div>
+      <div class="platform-info">
+        <h2 id="card-title">Paste any link</h2>
+        <p id="card-subtitle">YouTube, TikTok, Instagram, Twitter & more</p>
+      </div>
+    </div>
+
+    <div class="input-wrap">
+      <span class="input-prefix">URL</span>
+      <input type="text" id="media-url" placeholder="https://..." autocomplete="off" spellcheck="false">
+      <button class="paste-btn" onclick="pasteFromClipboard()">PASTE</button>
+    </div>
+
+    <!-- Format Section (populated from API) -->
+    <div class="format-section" id="format-section">
+      <div class="format-label">Choose Format</div>
+      <div class="format-tabs" id="format-tabs">
+        <button class="tab-btn active" id="tab-video" onclick="switchTab('video',this)">Video</button>
+        <button class="tab-btn" id="tab-audio" onclick="switchTab('audio',this)">Audio Only</button>
+      </div>
+      <div id="quality-container" class="quality-grid"></div>
+    </div>
+
+    <button id="btn-download" disabled onclick="handleDownload()">
+      <div class="btn-shimmer"></div>
+      Paste a link to begin
+    </button>
+
+    <div class="progress-area" id="progress-area">
+      <div id="stages-container"></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <div class="progress-pct" id="progress-pct">0%</div>
+    </div>
+
+    <div class="error-area" id="error-area">
+      <div class="error-title" id="error-title">⚠ Something went wrong</div>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+
+    <div class="result-area" id="result-area">
+      <div class="result-title">✓ Your file is ready</div>
+      <div class="result-meta" id="result-meta"></div>
+      <a href="#" class="result-download-btn" id="result-link">↓ Save File</a>
+    </div>
+
+  </div>
+
+  <div class="history-section">
+    <div class="section-header">
+      <span class="section-title">// Recent Downloads</span>
+      <button class="clear-btn" onclick="clearHistory()">Clear all</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <footer>NexLoad — Built for people who hate ads.<br><span>No tracking. No cookies. No limits.</span></footer>
+
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = ''; // empty = same origin (server.js serves this file)
+
+// ── Platform meta ─────────────────────────────────────────────────────────────
+const PLATFORMS = {
+  youtube:   { title:'YouTube Downloader',   subtitle:'MP4 up to 4K · MP3 up to 320kbps', icon:'▶️', accent:'#ef4444', glow:'rgba(239,68,68,.25)' },
+  instagram: { title:'Instagram Downloader', subtitle:'Reels, Posts, Stories — no watermark', icon:'📸', accent:'#e1306c', glow:'rgba(225,48,108,.25)' },
+  tiktok:    { title:'TikTok Downloader',    subtitle:'No watermark, original audio preserved', icon:'🎵', accent:'#00f2ea', glow:'rgba(0,242,234,.2)' },
+  twitter:   { title:'Twitter / X Downloader', subtitle:'Videos and GIFs in full quality', icon:'🐦', accent:'#1d9bf0', glow:'rgba(29,155,240,.2)' },
+  facebook:  { title:'Facebook Downloader',  subtitle:'Public videos in HD or SD', icon:'👥', accent:'#1877f2', glow:'rgba(24,119,242,.2)' },
+  soundcloud:{ title:'SoundCloud Downloader',subtitle:'High quality MP3 from any public track', icon:'☁️', accent:'#ff5500', glow:'rgba(255,85,0,.2)' },
+  pinterest: { title:'Pinterest Downloader', subtitle:'Images and videos in original quality', icon:'📌', accent:'#e60023', glow:'rgba(230,0,35,.2)' },
+  reddit:    { title:'Reddit Downloader',    subtitle:'Videos with sound, images & GIFs', icon:'🤖', accent:'#ff4500', glow:'rgba(255,69,0,.2)' },
+  other:     { title:'Universal Downloader', subtitle:'Fetching available formats...', icon:'⬇️', accent:'#00f5c4', glow:'rgba(0,245,196,.2)' },
+  default:   { title:'Paste any link',       subtitle:'YouTube, TikTok, Instagram, Twitter & more', icon:'⬇️', accent:'#00f5c4', glow:'rgba(0,245,196,.15)' },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  platform: 'default',
+  tab: 'video',
+  formats: { video: [], audio: [] },
+  selected: null,       // { formatId, ext, convertToMp3, label, sub, size }
+  mediaInfo: null,      // full response from /api/info
+  fetching: false,
+  debounceTimer: null,
+};
+let history = JSON.parse(localStorage.getItem('nl_history') || '[]');
+let totalDL  = parseInt(localStorage.getItem('nl_total') || '0');
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updateStatTotal();
+  renderHistory();
+  setUI('default');
+  document.getElementById('media-url').addEventListener('input', onUrlInput);
+});
+
+// ── URL input handler ─────────────────────────────────────────────────────────
+function onUrlInput(e) {
+  const url = e.target.value.trim();
+  clearTimeout(state.debounceTimer);
+  hideExtras();
+  state.selected = null;
+  state.mediaInfo = null;
+
+  if (!url) { setUI('default'); resetFormats(); return; }
+
+  const plat = detectPlatform(url);
+  setUI(plat);
+
+  if (plat === 'default' || !isValidUrl(url)) {
+    resetFormats();
+    setBtn(true, 'Paste a valid link');
+    return;
+  }
+
+  // Debounce: wait 600ms after user stops typing then fetch info
+  setBtn(true, '<span class="spinner spinner-light"></span>Loading formats…');
+  state.debounceTimer = setTimeout(() => fetchInfo(url), 600);
+}
+
+// ── Detect platform ───────────────────────────────────────────────────────────
+function detectPlatform(url) {
+  const u = url.toLowerCase();
+  if (u.includes('youtube.com') || u.includes('youtu.be'))  return 'youtube';
+  if (u.includes('instagram.com'))                           return 'instagram';
+  if (u.includes('tiktok.com') || u.includes('vm.tiktok'))  return 'tiktok';
+  if (u.includes('twitter.com') || u.includes('x.com'))     return 'twitter';
+  if (u.includes('facebook.com') || u.includes('fb.watch')) return 'facebook';
+  if (u.includes('soundcloud.com'))                         return 'soundcloud';
+  if (u.includes('pinterest.com') || u.includes('pin.it'))  return 'pinterest';
+  if (u.includes('reddit.com') || u.includes('redd.it'))    return 'reddit';
+  if (u.startsWith('http'))                                  return 'other';
+  return 'default';
+}
+
+function isValidUrl(s) { try { new URL(s); return s.startsWith('http'); } catch { return false; } }
+
+// ── Fetch info from backend ───────────────────────────────────────────────────
+async function fetchInfo(url) {
+  state.fetching = true;
+  showLoading();
+
+  try {
+    const res  = await fetch(`${API}/api/info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showError('Could not fetch media', data.error || 'Unknown error');
+      resetFormats();
+      setBtn(true, 'Try another link');
+      return;
+    }
+
+    state.mediaInfo = data;
+    state.formats.video = data.videoFormats || [];
+    state.formats.audio = data.audioFormats || [];
+    state.platform = detectPlatform(url);
+
+    // Show thumbnail
+    if (data.thumb) {
+      document.getElementById('thumb-img').src = data.thumb;
+      document.getElementById('thumb-title').innerText = data.title || '';
+      const dur = data.duration ? ` · ${formatDuration(data.duration)}` : '';
+      document.getElementById('thumb-sub').innerText = (data.uploader || '') + dur;
+      document.getElementById('thumb-row').classList.add('show');
+    }
+
+    // Auto-select tab
+    if (state.formats.video.length === 0) {
+      state.tab = 'audio';
+      document.getElementById('tab-video').disabled = true;
+      document.getElementById('tab-audio').classList.add('active');
+      document.getElementById('tab-video').classList.remove('active');
+    } else {
+      state.tab = 'video';
+      document.getElementById('tab-video').disabled = false;
+      document.getElementById('tab-video').classList.add('active');
+      document.getElementById('tab-audio').classList.remove('active');
+    }
+
+    renderFormats();
+    document.getElementById('format-section').classList.add('visible');
+    setBtn(true, '↓ Choose a format');
+
+  } catch (err) {
+    showError('Network error', 'Could not reach the server. Is it running?');
+    setBtn(true, 'Server unavailable');
+  } finally {
+    state.fetching = false;
+  }
+}
+
+function showLoading() {
+  const container = document.getElementById('quality-container');
+  container.innerHTML = `<div class="loading-formats"><span class="spinner spinner-light"></span> Fetching formats…</div>`;
+  document.getElementById('format-section').classList.add('visible');
+}
+
+// ── Render format buttons ─────────────────────────────────────────────────────
+function renderFormats() {
+  const list = state.tab === 'video' ? state.formats.video : state.formats.audio;
+  const container = document.getElementById('quality-container');
+  container.innerHTML = '';
+
+  if (!list.length) {
+    container.innerHTML = `<div class="loading-formats" style="grid-column:1/-1">No ${state.tab} formats found.</div>`;
+    return;
+  }
+
+  list.forEach((q, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quality-btn';
+    btn.innerHTML = `
+      <span class="qlabel">${q.label}</span>
+      <span class="qsub">${q.sub}</span>
+      ${i === 0 ? '<span class="qbadge">BEST</span>' : ''}
+      <span class="qsub" style="margin-top:4px">${q.size}</span>
+    `;
+    btn.onclick = () => selectQuality(i, btn, q);
+    container.appendChild(btn);
+  });
+}
+
+function selectQuality(idx, el, q) {
+  state.selected = q;
+  document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  setBtn(false, '↓ Convert & Download');
+}
+
+function switchTab(tab, el) {
+  state.tab = tab;
+  state.selected = null;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderFormats();
+  setBtn(true, '↓ Choose a format');
+}
+
+// ── Trigger download ──────────────────────────────────────────────────────────
+async function handleDownload() {
+  if (!state.selected || !state.mediaInfo) return;
+
+  const url = document.getElementById('media-url').value.trim();
+  hideExtras();
+
+  setBtn(true, '<span class="spinner"></span>Starting…');
+  document.getElementById('progress-area').classList.add('show');
+
+  const stages = ['Connecting to server', 'Fetching media stream', 'Processing & encoding', 'Preparing your file'];
+  renderStages(stages);
+
+  // Animate first 3 stages visually (real download happens on server)
+  activateStage(0);
+  await animatePct(0, 15, 400);
+  completeStage(0); activateStage(1);
+
+  await animatePct(15, 35, 500);
+  completeStage(1); activateStage(2);
+
+  try {
+    // Kick off the actual download request (streaming)
+    const res = await fetch(`${API}/api/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        formatId:      state.selected.formatId,
+        ext:           state.selected.ext,
+        convertToMp3:  state.selected.convertToMp3 || false,
+        title:         state.mediaInfo.title || 'media',
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Download failed.' }));
+      throw new Error(err.error || 'Server error.');
+    }
+
+    await animatePct(35, 85, 1200);
+    completeStage(2); activateStage(3);
+
+    // Stream blob to browser
+    const blob = await res.blob();
+    await animatePct(85, 100, 300);
+    completeStage(3);
+
+    document.getElementById('progress-area').classList.remove('show');
+
+    // Get filename from Content-Disposition
+    const disp = res.headers.get('Content-Disposition') || '';
+    const match = disp.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : `nexload.${state.selected.ext || 'mp4'}`;
+
+    // Trigger browser download
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+    // Show success
+    showResult(filename, state.selected, state.mediaInfo);
+    addToHistory(url, state.selected, state.mediaInfo);
+    totalDL++;
+    localStorage.setItem('nl_total', totalDL);
+    updateStatTotal();
+
+    setBtn(false, '↓ Convert & Download');
+
+  } catch (err) {
+    document.getElementById('progress-area').classList.remove('show');
+    showError('Download failed', err.message || 'An unexpected error occurred.');
+    setBtn(false, '↓ Try again');
+  }
+}
+
+// ── Progress animation ────────────────────────────────────────────────────────
+function renderStages(stages) {
+  document.getElementById('stages-container').innerHTML = stages.map((s, i) => `
+    <div class="progress-stage">
+      <div class="stage-dot" id="dot-${i}"></div>
+      <div class="stage-label" id="lbl-${i}">${s}</div>
+    </div>`).join('');
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-pct').innerText = '0%';
+}
+function activateStage(i) {
+  const d = document.getElementById(`dot-${i}`), l = document.getElementById(`lbl-${i}`);
+  if (d) d.classList.add('active');
+  if (l) l.classList.add('active');
+}
+function completeStage(i) {
+  const d = document.getElementById(`dot-${i}`);
+  if (d) { d.classList.remove('active'); d.classList.add('done'); }
+}
+async function animatePct(from, to, ms) {
+  const steps = 20, delay = ms / steps;
+  for (let i = 1; i <= steps; i++) {
+    const val = Math.round(from + (to - from) * (i / steps));
+    document.getElementById('progress-fill').style.width = val + '%';
+    document.getElementById('progress-pct').innerText = val + '%';
+    await sleep(delay);
+  }
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setUI(platform) {
+  const cfg = PLATFORMS[platform] || PLATFORMS.default;
+  state.platform = platform;
+  document.getElementById('platform-icon').innerText = cfg.icon;
+  document.getElementById('card-title').innerText = cfg.title;
+  document.getElementById('card-subtitle').innerText = cfg.subtitle;
+  const btn = document.getElementById('btn-download');
+  if (platform !== 'default') {
+    btn.style.background = `linear-gradient(135deg,${cfg.accent},${cfg.accent}cc)`;
+    btn.style.boxShadow  = `0 0 30px ${cfg.glow}`;
+    btn.style.color      = isLight(cfg.accent) ? '#000' : '#fff';
+  } else {
+    btn.style.background = '';
+    btn.style.boxShadow  = '';
+    btn.style.color      = '';
+  }
+  document.getElementById('media-card').classList.toggle('active', platform !== 'default');
+}
+function setBtn(disabled, html) {
+  const btn = document.getElementById('btn-download');
+  btn.disabled = disabled;
+  btn.innerHTML = `<div class="btn-shimmer"></div>${html}`;
+}
+function resetFormats() {
+  document.getElementById('format-section').classList.remove('visible');
+  document.getElementById('thumb-row').classList.remove('show');
+  state.formats = { video: [], audio: [] };
+  state.selected = null;
+  state.mediaInfo = null;
+  setBtn(true, 'Paste a link to begin');
+}
+function hideExtras() {
+  document.getElementById('progress-area').classList.remove('show');
+  document.getElementById('result-area').classList.remove('show');
+  document.getElementById('error-area').classList.remove('show');
+}
+function showError(title, msg) {
+  document.getElementById('error-title').innerText = '⚠ ' + title;
+  document.getElementById('error-msg').innerText = msg;
+  document.getElementById('error-area').classList.add('show');
+}
+function showResult(filename, q, info) {
+  const meta = `${filename} · ${q.label} ${q.sub}${q.size && q.size !== 'N/A' ? ' · ' + q.size : ''}`;
+  document.getElementById('result-meta').innerText = meta;
+  document.getElementById('result-link').onclick = (e) => { e.preventDefault(); };
+  document.getElementById('result-area').classList.add('show');
+}
+function isLight(hex) {
+  const c = hex.replace('#','');
+  const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
+  return (r*299+g*587+b*114)/1000 > 128;
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function addToHistory(url, q, info) {
+  const cfg = PLATFORMS[detectPlatform(url)] || PLATFORMS.default;
+  history.unshift({
+    url, icon: cfg.icon,
+    title: info?.title || extractDomain(url),
+    label: `${q.label} ${q.sub}`,
+    time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    domain: extractDomain(url),
+  });
+  if (history.length > 10) history.pop();
+  localStorage.setItem('nl_history', JSON.stringify(history));
+  renderHistory();
+}
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!history.length) {
+    el.innerHTML = `<div class="empty-state"><span class="empty-icon">📭</span>No downloads yet. Paste a link above to start.</div>`;
+    return;
+  }
+  el.innerHTML = history.map(h => `
+    <div class="history-item" onclick="reuseUrl('${encodeURIComponent(h.url)}')">
+      <span class="history-icon">${h.icon}</span>
+      <div class="history-info">
+        <div class="history-url">${h.title || h.url}</div>
+        <div class="history-meta">${h.domain} · ${h.time}</div>
+      </div>
+      <span class="history-badge">${h.label}</span>
+    </div>`).join('');
+}
+function clearHistory() {
+  history = [];
+  localStorage.removeItem('nl_history');
+  renderHistory();
+}
+function reuseUrl(encoded) {
+  const url = decodeURIComponent(encoded);
+  document.getElementById('media-url').value = url;
+  document.getElementById('media-url').dispatchEvent(new Event('input'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function extractDomain(url) {
+  try { return new URL(url).hostname.replace('www.',''); } catch { return url; }
+}
+function formatDuration(secs) {
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    const input = document.getElementById('media-url');
+    input.value = text; input.dispatchEvent(new Event('input'));
+  } catch { document.getElementById('media-url').focus(); }
+}
+function updateStatTotal() {
+  document.getElementById('stat-total').innerText = totalDL;
+}
+</script>
+</body>
+</html>
