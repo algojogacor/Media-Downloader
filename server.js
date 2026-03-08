@@ -13,9 +13,15 @@ const sanitize  = require('sanitize-filename');
 const { v4: uuidv4 } = require('uuid');
 
 const app  = express();
+app.set('trust proxy', 1); // Required for Railway/reverse proxy
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const TMP  = path.join(__dirname, 'tmp');
+
+// yt-dlp path: prefer local binary (Railway build), fallback to system PATH
+const YTDLP = fs.existsSync(path.join(__dirname, 'yt-dlp'))
+  ? path.join(__dirname, 'yt-dlp')
+  : 'yt-dlp';
 
 // ── Create tmp dir ─────────────────────────────────────────────────────────────
 if (!fs.existsSync(TMP)) fs.mkdirSync(TMP, { recursive: true });
@@ -62,7 +68,7 @@ function getMime(ext) {
 // Run yt-dlp, collect stdout, return parsed JSON
 function ytDlpJson(args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('yt-dlp', args);
+    const proc = spawn(YTDLP, args);
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
@@ -230,7 +236,7 @@ app.post('/api/download', async (req, res) => {
 
   console.log(`[download] yt-dlp ${args.join(' ')}`);
 
-  const proc = spawn('yt-dlp', args);
+  const proc = spawn(YTDLP, args);
   let stderr = '';
   proc.stderr.on('data', d => { stderr += d.toString(); });
   proc.stdout.on('data', d => process.stdout.write(d));
@@ -272,7 +278,7 @@ app.post('/api/download', async (req, res) => {
 // GET /api/health
 // ══════════════════════════════════════════════════════════════════════════════
 app.get('/api/health', (req, res) => {
-  exec('yt-dlp --version', (e1, v1) => {
+  exec(YTDLP + ' --version', (e1, v1) => {
     exec('ffmpeg -version', (e2, v2) => {
       res.json({
         status: 'ok',
