@@ -382,14 +382,25 @@ async function fetchInfo(url) {
     }
 
     // Auto-select tab
-    if (state.formats.video.length === 0) {
+    if (data.isImagePost) {
+      // Photo post — show Photo tab only
+      state.tab = 'video'; // videoFormats contains imageFormats from server
+      document.getElementById('tab-video').innerText = 'Photo';
+      document.getElementById('tab-video').disabled = false;
+      document.getElementById('tab-video').classList.add('active');
+      document.getElementById('tab-audio').style.display = 'none';
+    } else if (state.formats.video.length === 0) {
       state.tab = 'audio';
       document.getElementById('tab-video').disabled = true;
+      document.getElementById('tab-video').innerText = 'Video';
+      document.getElementById('tab-audio').style.display = '';
       document.getElementById('tab-audio').classList.add('active');
       document.getElementById('tab-video').classList.remove('active');
     } else {
       state.tab = 'video';
       document.getElementById('tab-video').disabled = false;
+      document.getElementById('tab-video').innerText = 'Video';
+      document.getElementById('tab-audio').style.display = '';
       document.getElementById('tab-video').classList.add('active');
       document.getElementById('tab-audio').classList.remove('active');
     }
@@ -441,7 +452,7 @@ function selectQuality(idx, el, q) {
   state.selected = q;
   document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
-  setBtn(false, '↓ Convert & Download');
+  setBtn(false, state.selected && state.selected.isImage ? '↓ Download Photo' : '↓ Convert & Download');
 }
 
 function switchTab(tab, el) {
@@ -484,6 +495,7 @@ async function handleDownload() {
         formatId:      state.selected.formatId,
         ext:           state.selected.ext,
         convertToMp3:  state.selected.convertToMp3 || false,
+        isImage:       state.selected.isImage || false,
         title:         state.mediaInfo.title || 'media',
       }),
     });
@@ -523,7 +535,7 @@ async function handleDownload() {
     localStorage.setItem('nl_total', totalDL);
     updateStatTotal();
 
-    setBtn(false, '↓ Convert & Download');
+    setBtn(false, state.selected && state.selected.isImage ? '↓ Download Photo' : '↓ Convert & Download');
 
   } catch (err) {
     document.getElementById('progress-area').classList.remove('show');
