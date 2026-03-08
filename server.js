@@ -267,7 +267,8 @@ app.post('/api/download', async (req, res) => {
     // Image post — just download best image format
     args.push('-f', formatId || 'best');
   } else if (convertToMp3 || ext === 'mp3') {
-    args.push('-f', formatId || 'bestaudio', '-x', '--audio-format', 'mp3', '--audio-quality', '0');
+    // Always use bestaudio fresh — never reuse formatId for audio (URL expires)
+    args.push('-f', 'bestaudio/best', '-x', '--audio-format', 'mp3', '--audio-quality', '0');
   } else if (formatId && !['bestaudio','bestvideo','best'].includes(formatId)) {
     args.push('-f', `${formatId}+bestaudio/best`, '--merge-output-format', 'mp4');
   } else {
