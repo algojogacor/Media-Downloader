@@ -219,14 +219,28 @@ app.post('/api/info', async (req, res) => {
       audioFormats.unshift({ formatId:'bestaudio', label:'MP3', sub:'320kbps', ext:'mp3', size:'N/A', abr:320, convertToMp3:true });
     }
 
+    // Detect image post (no video, no audio — just a photo)
+    const isImagePost = videoFormats.length === 0 && audioFormats.filter(a => !a.convertToMp3).length === 0;
+    const imageFormats = [];
+    if (isImagePost || (info.ext && ['jpg','jpeg','png','webp'].includes(info.ext))) {
+      imageFormats.push({ formatId: 'best', label: 'JPG', sub: 'Original', ext: info.ext || 'jpg', size: info.filesize ? '~' + (info.filesize/1024/1024).toFixed(1) + 'MB' : 'N/A', isImage: true });
+    }
+    // Also check if any format is image type
+    if (info.formats) {
+      info.formats.filter(f => f.ext && ['jpg','jpeg','png','webp'].includes(f.ext)).forEach(f => {
+        if (!imageFormats.length) imageFormats.push({ formatId: f.format_id, label: (f.ext || 'jpg').toUpperCase(), sub: 'Original Quality', ext: f.ext || 'jpg', size: f.filesize ? '~' + (f.filesize/1024/1024).toFixed(1) + 'MB' : 'N/A', isImage: true });
+      });
+    }
+
     res.json({
       title:        info.title || 'Unknown Title',
       duration:     info.duration,
       thumb:        info.thumbnail,
       uploader:     info.uploader || info.channel || '',
       platform,
-      videoFormats: videoFormats.slice(0, 6),
-      audioFormats: audioFormats.slice(0, 5),
+      isImagePost:  imageFormats.length > 0 && videoFormats.length === 0,
+      videoFormats: imageFormats.length > 0 && videoFormats.length === 0 ? imageFormats : videoFormats.slice(0, 6),
+      audioFormats: imageFormats.length > 0 && videoFormats.length === 0 ? [] : audioFormats.slice(0, 5),
     });
 
   } catch (err) {
@@ -239,7 +253,7 @@ app.post('/api/info', async (req, res) => {
 // POST /api/download
 // ══════════════════════════════════════════════════════════════════════════════
 app.post('/api/download', async (req, res) => {
-  const { url, formatId, ext, convertToMp3, title } = req.body;
+  const { url, formatId, ext, convertToMp3, isImage, title } = req.body;
   if (!url || !isValidUrl(url)) return res.status(400).json({ error: 'Invalid URL.' });
 
   const id        = uuidv4();
@@ -249,7 +263,10 @@ app.post('/api/download', async (req, res) => {
 
   const args = [...COMMON_FLAGS];
 
-  if (convertToMp3 || ext === 'mp3') {
+  if (isImage) {
+    // Image post — just download best image format
+    args.push('-f', formatId || 'best');
+  } else if (convertToMp3 || ext === 'mp3') {
     args.push('-f', formatId || 'bestaudio', '-x', '--audio-format', 'mp3', '--audio-quality', '0');
   } else if (formatId && !['bestaudio','bestvideo','best'].includes(formatId)) {
     args.push('-f', `${formatId}+bestaudio/best`, '--merge-output-format', 'mp4');
