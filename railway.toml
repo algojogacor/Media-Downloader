@@ -1,10 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /app/yt-dlp && chmod a+rx /app/yt-dlp"
+buildCommand = "apt-get update && apt-get install -y python3 ffmpeg && npm install && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /app/yt-dlp && chmod a+rx /app/yt-dlp"
 
 [deploy]
 startCommand = "node server.js"
 restartPolicyType = "on_failure"
-
-[nixpacks]
-aptPkgs = ["ffmpeg", "curl"]
